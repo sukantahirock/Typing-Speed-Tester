@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple TypeRacer Clone</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #f5f5f5;
+        }
+        
+        .game-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .text-display {
+            font-size: 24px;
+            margin: 20px 0;
+            line-height: 1.5;
+            min-height: 120px;
+            text-align: left;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #fafafa;
+        }
+        
+        .text-input {
+            width: 100%;
+            padding: 10px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+        
+        .stat-box {
+            background-color: #e9e9e9;
+            padding: 10px 20px;
+            border-radius: 4px;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .correct {
+            color: green;
+        }
+        
+        .incorrect {
+            color: red;
+            text-decoration: underline;
+        }
+        
+        .current {
+            background-color: #ffff99;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Simple TypeRacer</h1>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div>WPM</div>
+                <div id="wpm">0</div>
+            </div>
+            <div class="stat-box">
+                <div>Accuracy</div>
+                <div id="accuracy">100%</div>
+            </div>
+            <div class="stat-box">
+                <div>Time</div>
+                <div id="time">0s</div>
+            </div>
+        </div>
+        
+        <div id="text-display" class="text-display"></div>
+        <input type="text" id="text-input" class="text-input" placeholder="Start typing here..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        
+        <button id="restart-btn">Restart</button>
+    </div>
+
+    <script>
+        // Sample texts for the game
+        const sampleTexts = [
+            "The quick brown fox jumps over the lazy dog.",
+            "Programming is the art of telling another human what one wants the computer to do.",
+            "To be or not to be, that is the question.",
+            "The only way to learn a new programming language is by writing programs in it.",
+            "Life is what happens when you're busy making other plans."
+        ];
+        
+        // Game variables
+        let startTime;
+        let timerInterval;
+        let currentText = "";
+        let currentPosition = 0;
+        let correctChars = 0;
+        let totalChars = 0;
+        
+        // DOM elements
+        const textDisplay = document.getElementById('text-display');
+        const textInput = document.getElementById('text-input');
+        const wpmDisplay = document.getElementById('wpm');
+        const accuracyDisplay = document.getElementById('accuracy');
+        const timeDisplay = document.getElementById('time');
+        const restartBtn = document.getElementById('restart-btn');
+        
+        // Initialize the game
+        function initGame() {
+            // Select a random text
+            currentText = sampleTexts[Math.floor(Math.random() * sampleTexts.length)];
+            currentPosition = 0;
+            correctChars = 0;
+            totalChars = 0;
+            
+            // Display the text with highlighting
+            renderText();
+            
+            // Reset input and focus
+            textInput.value = "";
+            textInput.focus();
+            
+            // Reset stats
+            wpmDisplay.textContent = "0";
+            accuracyDisplay.textContent = "100%";
+            timeDisplay.textContent = "0s";
+            
+            // Clear any existing timer
+            clearInterval(timerInterval);
+            startTime = null;
+        }
+        
+        // Render the text with highlighting
+        function renderText() {
+            let html = "";
+            
+            for (let i = 0; i < currentText.length; i++) {
+                let char = currentText[i];
+                let spanClass = "";
+                
+                if (i < currentPosition) {
+                    spanClass = "correct";
+                } else if (i === currentPosition) {
+                    spanClass = "current";
+                }
+                
+                // Handle spaces (show as &nbsp;)
+                if (char === " ") {
+                    char = "&nbsp;";
+                }
+                
+                html += `<span class="${spanClass}">${char}</span>`;
+            }
+            
+            textDisplay.innerHTML = html;
+        }
+        
+        // Calculate and update WPM
+        function updateStats() {
+            if (!startTime) return;
+            
+            const currentTime = new Date();
+            const elapsedTime = (currentTime - startTime) / 1000; // in seconds
+            const minutes = elapsedTime / 60;
+            
+            // Calculate WPM (5 chars = 1 word)
+            const wpm = Math.round((correctChars / 5) / minutes) || 0;
+            wpmDisplay.textContent = wpm;
+            
+            // Update time
+            timeDisplay.textContent = `${Math.floor(elapsedTime)}s`;
+            
+            // Calculate accuracy
+            const accuracy = totalChars > 0 ? Math.round((correctChars / totalChars) * 100) : 100;
+            accuracyDisplay.textContent = `${accuracy}%`;
+        }
+        
+        // Event listeners
+        textInput.addEventListener('input', (e) => {
+            if (!startTime) {
+                startTime = new Date();
+                timerInterval = setInterval(updateStats, 1000);
+            }
+            
+            const inputChar = e.target.value[e.target.value.length - 1];
+            const targetChar = currentText[currentPosition];
+            
+            totalChars++;
+            
+            if (inputChar === targetChar) {
+                correctChars++;
+                currentPosition++;
+                e.target.value = "";
+                renderText();
+                
+                // Check if game is complete
+                if (currentPosition >= currentText.length) {
+                    clearInterval(timerInterval);
+                    textInput.disabled = true;
+                    setTimeout(() => {
+                        alert(`Game completed! Your final WPM: ${wpmDisplay.textContent}, Accuracy: ${accuracyDisplay.textContent}`);
+                    }, 100);
+                }
+            } else {
+                // Incorrect character
+                const spans = textDisplay.querySelectorAll('span');
+                if (spans[currentPosition]) {
+                    spans[currentPosition].classList.add('incorrect');
+                }
+            }
+        });
+        
+        restartBtn.addEventListener('click', initGame);
+        
+        // Start the game
+        initGame();
+    </script>
+</body>
+</html>
